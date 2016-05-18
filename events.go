@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/lab-d8/lol-at-pitt/draft"
+	"github.com/lab-D8/lol-at-pitt/draft"
 )
 
 type DraftHandler func(msg Message, room *DraftRoom)

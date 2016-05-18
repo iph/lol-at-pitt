@@ -9,8 +9,8 @@ import (
 	"strconv"
 
 	"github.com/TrevorSStone/goriot"
-	"github.com/lab-d8/lol-at-pitt/ols"
-	"labix.org/v2/mgo"
+	"github.com/lab-D8/lol-at-pitt/ols"
+	"gopkg.in/mgo.v2"
 )
 
 func dumpDb(filename string) {

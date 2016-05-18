@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/TrevorSStone/goriot"
 	"github.com/go-martini/martini"
-	"github.com/lab-d8/lol-at-pitt/ols"
+	"github.com/lab-D8/lol-at-pitt/ols"
 	"github.com/martini-contrib/render"
 )
 

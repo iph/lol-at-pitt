@@ -8,8 +8,8 @@ import (
 
 	"github.com/TrevorSStone/goriot"
 	"github.com/docopt/docopt-go"
-	"github.com/lab-d8/lol-at-pitt/ols"
-	"labix.org/v2/mgo"
+	"github.com/lab-D8/lol-at-pitt/ols"
+	"gopkg.in/mgo.v2"
 )
 
 const ApiKey string = "a3c96054-e21f-4238-a842-28caa10943a0"
@@ -17,8 +17,8 @@ const ApiKey string = "a3c96054-e21f-4238-a842-28caa10943a0"
 type CmdArgs map[string]interface{}
 type Runnable func(map[string]interface{}) bool
 type Command struct {
-	Runnable               // used for testing whether a command is to be run
-	Cmd      func(CmdArgs) // The actual function to run
+	Runnable          // used for testing whether a command is to be run
+	Cmd func(CmdArgs) // The actual function to run
 }
 
 type DB struct {
@@ -92,8 +92,8 @@ var cmds []Command = []Command{
 
 func main() {
 	goriot.SetAPIKey(ApiKey)
-	goriot.SetLongRateLimit(500, 10*time.Minute)
-	goriot.SetSmallRateLimit(10, 10*time.Second)
+	goriot.SetLongRateLimit(500, 10 * time.Minute)
+	goriot.SetSmallRateLimit(10, 10 * time.Second)
 	usage := `OLS CLI
 
 Usage:

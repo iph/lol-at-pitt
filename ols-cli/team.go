@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/lab-d8/lol-at-pitt/ols"
+	"github.com/lab-D8/lol-at-pitt/ols"
 )
 
 func ShowTeams() {

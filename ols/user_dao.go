@@ -1,8 +1,8 @@
 package ols
 
 import (
-	"github.com/lab-d8/lol-at-pitt/site"
-	"labix.org/v2/mgo"
+	"github.com/lab-D8/lol-at-pitt/site"
+	"gopkg.in/mgo.v2"
 )
 
 type UsersDAO struct {

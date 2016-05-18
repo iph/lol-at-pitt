@@ -10,9 +10,9 @@ import (
 
 	"github.com/TrevorSStone/goriot"
 	"github.com/go-martini/martini"
-	"github.com/lab-d8/lol-at-pitt/ols"
-	"github.com/lab-d8/lol-at-pitt/site"
-	"github.com/lab-d8/oauth2"
+	"github.com/lab-D8/lol-at-pitt/ols"
+	"github.com/lab-D8/lol-at-pitt/site"
+	"github.com/lab-D8/oauth2"
 	"github.com/martini-contrib/render"
 )
 
