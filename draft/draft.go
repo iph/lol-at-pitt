@@ -90,9 +90,10 @@ func Bid(id string, amount int) bool {
 	bidSuccessful := false
 	if captain != nil {
 		lock.Lock()
+		result := len(current.Team) < 2 && amount == 0 && current.HighestBid == 0 && !Paused
 		// 0 bid system coming in hot!
-		log.Println("Bid stats: ", current.Team, ", ", current.HighestBid, ", ", amount)
-		if len(current.Team) > 1 && amount == 0 && current.HighestBid == 0 && !Paused {
+		log.Println("Bid stats: ", current.Team, ", ", current.HighestBid, ", ", result)
+		if len(current.Team) < 2 && amount == 0 && current.HighestBid == 0 && !Paused {
 			current.Team = captain.TeamName
 			current.HighestBid = amount
 			bidSuccessful = true
