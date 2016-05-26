@@ -127,7 +127,7 @@ func handle_current_player(msg Message, room *DraftRoom) {
 	roles := ""
 
 	for _, val := range player.Proficiencies {
-		roles += fmt.Sprintf(`<span class='text-info>%s</span><span>%s</span>`, val.Score, val.Position)
+		roles += fmt.Sprintf(`<span class='text-info>%s</span><span>%s</span>`, strconv.Itoa(val.Score), val.Position)
 	}
 
 	res := fmt.Sprintf(format, player.Ign, roles, strconv.Itoa(player.Score), strconv.FormatFloat(player.ProficiencyTotal, 'f', 2, 64))
