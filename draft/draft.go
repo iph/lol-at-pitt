@@ -93,7 +93,7 @@ func Bid(id string, amount int) bool {
 		log.Println("[BID]: ", captain.Ign, ",", captain.Name, ",", current.Ign, ",", current.HighestBid, ",", captain.TeamName)
 
 		// 0 bid system coming in hot!
-		if current.Team != nil && amount == 0 && current.HighestBid == 0 && !Paused {
+		if current.Team != "" && amount == 0 && current.HighestBid == 0 && !Paused {
 			current.Team = captain.TeamName
 			current.HighestBid = amount
 			bidSuccessful = true
