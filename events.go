@@ -121,7 +121,7 @@ func handle_current_player(msg Message, room *DraftRoom) {
 	var format string = `
 		<div class="row">
 			<div class="col-md-3">%s</div>
-			<div class="col-md-4">%s</div>
+			<div class="col-md-4"><div class="row">Preferred Role: Score</div>%s</div>
 			<div id="current_tier" class="text-muted col-md-4">
 			        <div class="row">LKS: %s</div>
 			        <div class="row">Proficiency: %s</div>
@@ -166,7 +166,7 @@ func handle_update(msg Message, room *DraftRoom) {
 }
 
 func handle_winner(msg Message, room *DraftRoom) {
-	Handle(Message{Type: "event", Text: draft.GetCurrentPlayer().Team + " bought" + draft.GetCurrentPlayer().Ign + " for " + strconv.Itoa(draft.GetCurrentPlayer().HighestBid)})
+	Handle(Message{Type: "event", Text: draft.GetCurrentPlayer().Team + " bought " + draft.GetCurrentPlayer().Ign + " for " + strconv.Itoa(draft.GetCurrentPlayer().HighestBid)})
 	draft.Win()
 	Handle(Message{Type: "update"})
 	draft.Paused = true
