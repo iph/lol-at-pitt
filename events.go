@@ -177,11 +177,9 @@ func handle_timer_reset(msg Message, room *DraftRoom) {
 }
 
 func handle_timer_end(msg Message, room *DraftRoom) {
-	current := draft.GetCurrentPlayer()
-	if current.HighestBid > 0 {
-		draft.Paused = true
-		handle_winner(msg, room)
-	}
+	draft.Paused = true
+	handle_winner(msg, room)
+
 }
 
 func timer_handler() {
