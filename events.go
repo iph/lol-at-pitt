@@ -63,7 +63,7 @@ func handle_refresh(msg Message, room *DraftRoom) {
 
 func handle_more_bid(msg Message, room *DraftRoom) {
 	amt, err := strconv.Atoi(msg.Text)
-	log.Println(msg, err)
+	//log.Println(msg, err)
 	if err == nil {
 		amount := draft.GetCurrentPlayer().HighestBid + amt
 		Handle(Message{Type: "bid", From: msg.From, Text: strconv.Itoa(amount)})
@@ -72,7 +72,7 @@ func handle_more_bid(msg Message, room *DraftRoom) {
 
 func handle_bid(msg Message, room *DraftRoom) {
 	amt, err := strconv.Atoi(msg.Text)
-	log.Println(msg)
+	//log.Println(msg)
 	if err == nil {
 		bidSuccess := draft.Bid(msg.From, amt)
 		captain := draft.GetAuctioner(msg.From)
