@@ -115,10 +115,11 @@ func handle_current_player(msg Message, room *DraftRoom) {
 	var format string = `
 		<div class="row">
 			<div class="col-md-3">%s</div>
-			<div class="col-md-8">%s</div>
-	</div>
-	<div class="row">
-			<div id="current_tier" class="col-md-3 text-muted">LKS: %s, Proficiency Score: %s</div>
+			<div class="col-md-4">%s</div>
+			<div id="current_tier" class="text-muted col-md-4">
+			        <div class="row">LKS: %s</div>
+			        <div class="row">Proficiency: %s</div>
+			</div>
 	</div>
 	</div>
 	`
@@ -127,7 +128,7 @@ func handle_current_player(msg Message, room *DraftRoom) {
 	roles := ""
 
 	for _, val := range player.Proficiencies {
-		roles += fmt.Sprintf(`<span class='text-info'>%s</span><span>%s</span>`, strconv.Itoa(val.Score), val.Position)
+		roles += fmt.Sprintf(`<div class="row"><span class='text-info'>%s: </span><span>%s</span></div>`, val.Position, strconv.Itoa(val.Score))
 	}
 
 	res := fmt.Sprintf(format, player.Ign, roles, strconv.Itoa(player.Score), strconv.FormatFloat(player.ProficiencyTotal, 'f', 2, 64))
