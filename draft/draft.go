@@ -1,225 +1,206 @@
 package draft
 
 import (
-	"fmt"
-	"sort"
 	"sync"
 
+	"encoding/csv"
+	"github.com/TrevorSStone/goriot"
 	"github.com/lab-D8/lol-at-pitt/ols"
+	"os"
+	"strconv"
 )
-
-type DraftPlayer struct {
-	ols.Player
-	HighestBid int
-	Team       string
-}
-
-type DraftCaptain struct {
-	ols.Player
-	FacebookID string
-	TeamName   string
-	Points     int
-}
-
-type DraftPlayers []*DraftPlayer
-type DraftCaptains []*DraftCaptain
 
 var (
-	Paused          bool         = true
-	lock            sync.Mutex   = sync.Mutex{}
-	previous        DraftPlayers = DraftPlayers{}
-	current         *DraftPlayer
-	upcomingPlayers DraftPlayers
-	captains        map[string]*DraftCaptain = map[string]*DraftCaptain{}
+	Snapshot LeagueDraftSnapshot
+	Events   DraftStore
+	OlsId    string
+	Paused   bool       = true
+	lock     sync.Mutex = sync.Mutex{}
 )
 
-func Init() {
-	upcomingPlayers = getPlayers()
-	if len(upcomingPlayers) > 0 {
-		current, upcomingPlayers = upcomingPlayers[0], upcomingPlayers[1:]
+func Init(olsId string) {
+	Events = DraftStore{
+		DraftEvents: []*DraftEvent{},
+		ID:          olsId,
+	}
+	OlsId = olsId
+	db := ols.InitDB()
+	collection := db.C("auctions")
+	mapa := map[string]string{
+		"id": olsId,
+	}
+	data := collection.Find(mapa)
+	amt, err := data.Count()
+
+	if err != nil {
+		panic("Things blew up in the database")
+	}
+
+	if amt == 0 {
+		Snapshot = LeagueDraftSnapshot{
+			CurrentPlayer:  nil,
+			FuturePlayers:  []*DraftPlayer{},
+			Teams:          InitInitialCaptains("resources/captains.csv"),
+			SkippedPlayers: []*DraftPlayer{},
+			EventID:        -1,
+			ID:             olsId,
+		}
+		collection.Insert(Snapshot)
 	} else {
-		current = &DraftPlayer{}
+		data.One(&Snapshot)
 	}
+}
 
-	allCaptains := getCaptains()
-	for _, captain := range allCaptains {
-		if captain.FacebookID == "" {
-			captains[captain.TeamName] = captain
-		} else {
-			captains[captain.FacebookID] = captain
+func InitInitialCaptains(filename string) []*DraftTeam {
+	r, err := os.Open(filename)
+
+	if err != nil {
+		panic(err)
+	}
+	csvReader := csv.NewReader(r)
+	allData, err := csvReader.ReadAll()
+
+	if err != nil {
+		panic(err)
+	}
+	teams := []*DraftTeam{}
+	for _, record := range allData[1:] {
+
+		normalizedSummonerName := goriot.NormalizeSummonerName(record[1])[0]
+		summ, _ := goriot.SummonerByName(goriot.NA, normalizedSummonerName)
+		points, _ := strconv.Atoi(record[3])
+		team := &DraftTeam{
+			Players: []*DraftPlayer{},
+			Name:    record[0] + "'s Team",
+			Captain: DraftCaptain{
+				Name:          record[0],
+				LeagueID:      summ[normalizedSummonerName].ID,
+				Points:        points,
+				NormalizedIgn: normalizedSummonerName,
+			},
 		}
 
-	}
-}
-
-func GetCurrentPlayer() *DraftPlayer {
-	return current
-}
-
-func GetPlayers() []*DraftPlayer {
-	return upcomingPlayers
-}
-
-func GetCaptains() map[string]*DraftCaptain {
-	return captains
-}
-
-func GetAuctionerByTeam(team string) *DraftCaptain {
-	for _, captain := range captains {
-		if captain.TeamName == team {
-			return captain
-		}
+		teams = append(teams, team)
 	}
 
-	return nil
+	return teams
 }
 
-func GetAuctioner(id string) *DraftCaptain {
-	captain, ok := captains[id]
-
-	if ok {
-		return captain
-	} else {
-		return nil
+func Save() {
+	db := ols.InitDB()
+	collection := db.C("auctions")
+	mapa := map[string]string{
+		"id": OlsId,
 	}
+	collection.Update(mapa, Snapshot)
+	collection.Update(mapa, Events)
 }
 
-func Bid(id string, amount int) bool {
-	captain := GetAuctioner(id)
-	bidSuccessful := false
-	if captain != nil {
-		lock.Lock()
-		if captain.TeamName != current.Team && amount > current.HighestBid && amount <= captain.Points && !Paused {
-			current.Team = captain.TeamName
-			current.HighestBid = amount
-			bidSuccessful = true
-		}
-		lock.Unlock()
+func ProcessBidEvent(event BidEvent) bool {
+	team := Snapshot.GetTeamByFacebookId(event.DrafterFacebookID)
+
+	if team == nil {
+		return false
 	}
 
-	return bidSuccessful
-}
-
-func Win() {
 	lock.Lock()
-	captain := GetAuctionerByTeam(current.Team)
-	if captain != nil {
-		captain.Points -= current.HighestBid
-		oldteam := ols.GetTeamsDAO().LoadPlayerByCaptain(captain.Id)
-		team := oldteam
-		team.Points -= current.HighestBid
-		team.Players = append(team.Players, current.Id)
-		ols.GetTeamsDAO().Update(oldteam, team)
-	}
-	Paused = true
-
-	previous = append(previous, current)
-	if len(upcomingPlayers) != 0 {
-		current = upcomingPlayers[0]
-		upcomingPlayers = upcomingPlayers[1:]
+	currentHighestBid := Snapshot.CurrentPlayer.HighestBid
+	currentHighestTeam := Snapshot.CurrentPlayer.Team
+	bidSuccessful := false
+	// Don't bid if you are the current highest bidder, if you havent bid MORE than the current one, or you don't have the points.
+	if team.Name == currentHighestTeam || currentHighestBid >= event.Amount || event.Amount > team.Captain.Points {
+		bidSuccessful = false
+	} else {
+		Snapshot.CurrentPlayer.HighestBid = event.Amount
+		Snapshot.CurrentPlayer.Team = team.Name
+		bidSuccessful = true
 	}
 	lock.Unlock()
+	return bidSuccessful
 
+}
+
+func ProcessWinEvent(event WinEvent) {
+	lock.Lock()
+	team := Snapshot.GetTeamByFacebookId(event.CaptainFacebookID)
+	if team != nil {
+		team.Captain.Points -= event.Amount
+		team.Players = append(team.Players, Snapshot.CurrentPlayer)
+	}
+
+	Paused = true
+
+	if len(Snapshot.FuturePlayers) != 0 {
+		Snapshot.CurrentPlayer = Snapshot.FuturePlayers[0]
+		Snapshot.FuturePlayers = Snapshot.FuturePlayers[1:]
+	} else {
+		Snapshot.CurrentPlayer = nil
+	}
+	lock.Unlock()
+}
+
+func UnprocessWinEvent(event WinEvent) {
+	lock.Lock()
+
+	if Snapshot.CurrentPlayer != nil {
+		Snapshot.FuturePlayers = append([]*DraftPlayer{Snapshot.CurrentPlayer}, Snapshot.FuturePlayers...)
+	}
+
+	team := Snapshot.GetTeamByFacebookId(event.CaptainFacebookID)
+	if team != nil {
+		team.Captain.Points += event.Amount
+		for i, player := range team.Players {
+			if player.LeagueId == event.PlayerLeagueID {
+				currentPlayer := team.Players[i]
+				Snapshot.CurrentPlayer = currentPlayer
+				team.Players = append(team.Players[0:i], team.Players[i+1:]...)
+			}
+		}
+	}
+
+	Paused = true
+	lock.Unlock()
 }
 
 func TogglePause() {
 	Paused = !Paused
 }
 
-func Next() {
+func ProcessSkipEvent(event SkipEvent) {
 	lock.Lock()
-	previous = append(previous, current)
-	if len(upcomingPlayers) != 0 {
-
-		current = upcomingPlayers[0]
-		upcomingPlayers = upcomingPlayers[1:]
+	if Snapshot.CurrentPlayer != nil {
+		Snapshot.SkippedPlayers = append(Snapshot.SkippedPlayers, Snapshot.CurrentPlayer)
+		Snapshot.CurrentPlayer = nil
 	}
+
+	if len(Snapshot.FuturePlayers) > 0 {
+		Snapshot.CurrentPlayer = Snapshot.FuturePlayers[0]
+		Snapshot.FuturePlayers = Snapshot.FuturePlayers[1:]
+	}
+
+	Paused = true
 	lock.Unlock()
 }
 
-func Previous() {
+func UnprocessSkipEvent(event SkipEvent) {
 	lock.Lock()
-	if len(previous) > 0 {
-		currentArr := DraftPlayers{}
-		currentArr = append(currentArr, current)
-		upcomingPlayers = append(currentArr, upcomingPlayers...)
-		current = previous[len(previous)-1]
-		previous = previous[:len(previous)-1]
-		// Refund logic.
-		captain := GetAuctionerByTeam(current.Team)
-
-		if captain != nil {
-			oldteam := ols.GetTeamsDAO().LoadPlayerByCaptain(captain.Id)
-			team := oldteam
-			team.Points += current.HighestBid
-			team.Players = team.Players[:len(team.Players)-1]
-			ols.GetTeamsDAO().Update(oldteam, team)
-			captain.Points += current.HighestBid
-		}
-		current.HighestBid = 0
-		current.Team = ""
+	if Snapshot.CurrentPlayer != nil {
+		Snapshot.FuturePlayers = append([]*DraftPlayer{Snapshot.CurrentPlayer}, Snapshot.FuturePlayers...)
+		Snapshot.CurrentPlayer = nil
 	}
+	for i, player := range Snapshot.SkippedPlayers {
+		if player.LeagueId == event.PlayerLeagueID {
+			Snapshot.CurrentPlayer = Snapshot.SkippedPlayers[i]
+			Snapshot.SkippedPlayers = append(Snapshot.SkippedPlayers[0:i], Snapshot.SkippedPlayers[i+1:]...)
+		}
+	}
+
+	Paused = true
 	lock.Unlock()
-
 }
 
-func GetSortedCaptains() []*DraftCaptain {
-	captainz := DraftCaptains{}
-	for _, captain := range captains {
-		captainz = append(captainz, captain)
-	}
+func ProcessAddTeamEvent(event AddTeamEvent) {
+	lock.Lock()
 
-	sort.Sort(captainz)
-	return captainz
-}
-
-// Setup stuff
-func getPlayers() []*DraftPlayer {
-	players := ols.GetPlayersDAO().All()
-	sort.Sort(players)
-	var sortedPlayers []*ols.Player = players
-	draftPlayers := []*DraftPlayer{}
-	for _, player := range sortedPlayers {
-		team := ols.GetTeamsDAO().LoadPlayerByCaptain(player.Id)
-		otherTeam := ols.GetTeamsDAO().LoadPlayer(player.Id)
-		if team.Captain != player.Id && !otherTeam.IsPlayerOnTeam(player.Id) {
-			draftPlayers = append(draftPlayers, &DraftPlayer{Player: *player})
-		}
-	}
-
-	return draftPlayers
-}
-
-func getCaptains() []*DraftCaptain {
-	captains := ols.GetPlayersDAO().All()
-	sort.Sort(captains)
-	draftCaptains := []*DraftCaptain{}
-	var captains_sorted []*ols.Player = captains
-	for _, player := range captains_sorted {
-		team := ols.GetTeamsDAO().LoadPlayerByCaptain(player.Id)
-		if team.Captain == player.Id {
-			user := ols.GetUserDAO().GetUserLeague(player.Id)
-			draftCaptains = append(draftCaptains, &DraftCaptain{Player: *player, FacebookID: user.FacebookId, Points: team.Points, TeamName: team.Name})
-		}
-	}
-
-	return draftCaptains
-}
-
-func (p *DraftCaptains) Print() {
-	for _, player := range *p {
-		fmt.Println(player)
-	}
-}
-
-func (p DraftCaptains) Len() int {
-	return len(p)
-}
-
-func (p DraftCaptains) Swap(i, j int) {
-	p[i], p[j] = p[j], p[i]
-}
-
-func (p DraftCaptains) Less(i, j int) bool {
-	return p[i].Points > p[j].Points
+	lock.Unlock()
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/lab-D8/lol-at-pitt/draft"
+	"github.com/lab-D8/lol-at-pitt/utils"
 )
 
 type DraftHandler func(msg Message, room *DraftRoom)
@@ -37,26 +38,18 @@ func Handle(msg Message) {
 }
 
 func Init() {
-	draft.Init()
+	draft.Init("ols-summer-2016")
 	timer_handler()
 
 	RegisterDraftHandler("login", handle_update)
-	RegisterDraftHandler("update", handle_update)
 	RegisterDraftHandler("bid", handle_bid)
 	RegisterDraftHandler("bid-more", handle_more_bid)
-	RegisterDraftHandler("bidder", handle_bidder)
 	RegisterDraftHandler("event", handle_event)
-	RegisterDraftHandler("captains", handle_captains)
-	RegisterDraftHandler("upcoming", handle_upcoming)
 	RegisterDraftHandler("refresh", handle_refresh)
-	RegisterDraftHandler("timer-end", handle_timer_end)
-	RegisterDraftHandler("current-player", handle_current_player)
-	// winner
-	// final-ticks
 }
 
 func handle_refresh(msg Message, room *DraftRoom) {
-	draft.Init()
+	//draft.Init()
 	Handle(Message{Type: "update"})
 }
 
@@ -64,7 +57,7 @@ func handle_more_bid(msg Message, room *DraftRoom) {
 	amt, err := strconv.Atoi(msg.Text)
 	log.Println(msg, err)
 	if err == nil {
-		amount := draft.GetCurrentPlayer().HighestBid + amt
+		amount := draft.Snapshot.CurrentPlayer.HighestBid + amt
 		Handle(Message{Type: "bid", From: msg.From, Text: strconv.Itoa(amount)})
 	}
 }
@@ -73,12 +66,14 @@ func handle_bid(msg Message, room *DraftRoom) {
 	amt, err := strconv.Atoi(msg.Text)
 	log.Println(msg)
 	if err == nil {
-		bidSuccess := draft.Bid(msg.From, amt)
-		captain := draft.GetAuctioner(msg.From)
+		event := draft.BidEvent{
+			Amount:            amt,
+			PlayerLeagueID:    draft.Snapshot.CurrentPlayer.LeagueId,
+			DrafterFacebookID: msg.From,
+		}
+		bidSuccess := draft.ProcessBidEvent(event)
 		if bidSuccess {
-			formattedStr := fmt.Sprintf("<h5>%s bid <span  class='text-success'>%d</span> on <span class='text-success'>%s</span></h5>",
-				captain.TeamName, amt, draft.GetCurrentPlayer().Ign)
-			go Handle(Message{Type: "event", Text: formattedStr})
+			go Handle(Message{Type: "event", Text: util.JsonStringifyIgnoreError(event)})
 			currentCountdown = startingCountdownTime
 			allowTicks = true
 		}
@@ -90,50 +85,19 @@ func handle_event(msg Message, room *DraftRoom) {
 }
 
 func handle_captains(msg Message, room *DraftRoom) {
-	text := ""
-	format := `<li class='list-group-item'>%s (%s)<span class='text-info'> %d </span></li>`
-	captains := draft.GetSortedCaptains()
-	for _, captain := range captains {
-		res := fmt.Sprintf(format, captain.TeamName, captain.Name, captain.Points)
-		text += res
-	}
-	room.broadcast(&Message{Type: "captains", Text: text})
+	room.broadcast(&Message{Type: "captains", Text: util.JsonStringifyIgnoreError(draft.Snapshot)})
 }
 
 func handle_upcoming(msg Message, room *DraftRoom) {
-	text := ""
-	format := `<li class='list-group-item'> %s <span class='text-muted'> %d </span></li>`
-	players := draft.GetPlayers()
-	for _, player := range players {
-		res := fmt.Sprintf(format, player.Ign, player.Score)
-		text += res
-	}
-	room.broadcast(&Message{Type: "upcoming", Text: text})
-}
-
-func handle_current_player(msg Message, room *DraftRoom) {
-	var format string = `
-		<div class="row">
-			<div class="col-md-3">%s</div>
-			<div class="col-md-8">%s</div>
-	</div>
-	<div class="row">
-			<div id="current_tier" class="col-md-3 text-muted">%s</div>
-	</div>
-	</div>
-	`
-	player := draft.GetCurrentPlayer()
-	res := fmt.Sprintf(format, player.Ign, player.Roles, player.Tier)
-	room.broadcast(&Message{Type: "current-header", Text: player.Ign})
-	room.broadcast(&Message{Type: "current-player", Text: res})
+	room.broadcast(&Message{Type: "upcoming", Text: util.JsonStringifyIgnoreError(draft.Snapshot)})
 }
 
 func handle_bidder(msg Message, room *DraftRoom) {
-	captain := draft.GetAuctioner(msg.From)
-	if captain != nil {
-		str := fmt.Sprintf("%d", captain.Points)
+	team := draft.Snapshot.GetTeamByFacebookId(msg.From)
+	if team != nil {
+		str := fmt.Sprintf("%d", team.Captain.Points)
 		room.messageWithID(msg.From, &Message{Type: "points", Text: str})
-		room.messageWithID(msg.From, &Message{Type: "team", Text: captain.TeamName})
+		room.messageWithID(msg.From, &Message{Type: "team", Text: strconv.Itoa(team.Captain.Points)})
 	}
 
 }
@@ -142,29 +106,21 @@ func handle_bidder(msg Message, room *DraftRoom) {
 func handle_update(msg Message, room *DraftRoom) {
 	Handle(Message{Type: "captains"})
 	Handle(Message{Type: "upcoming"})
-	Handle(Message{Type: "current-player"})
 	Handle(Message{Type: "current-header"})
-	Handle(Message{Type: "event", Text: "Currently waiting to bid on.." + draft.GetCurrentPlayer().Ign})
+	//Handle(Message{Type: "event", Text: "Currently waiting to bid on.." + draft.Snapshot.CurrentPlayer.Ign})
 	for _, client := range room.clients {
 		Handle(Message{Type: "bidder", From: client.ID})
 	}
 
-
 }
 
 func handle_winner(msg Message, room *DraftRoom) {
-	Handle(Message{Type: "event", Text: draft.GetCurrentPlayer().Team + " bought" + draft.GetCurrentPlayer().Ign + " for " + strconv.Itoa(draft.GetCurrentPlayer().HighestBid)})
-	draft.Win()
 	Handle(Message{Type: "update"})
 	draft.Paused = true
 }
 
-func handle_timer_reset(msg Message, room *DraftRoom) {
-	currentCountdown = startingCountdownTime
-}
-
 func handle_timer_end(msg Message, room *DraftRoom) {
-	current := draft.GetCurrentPlayer()
+	current := draft.Snapshot.CurrentPlayer
 	if current.HighestBid > 0 {
 		draft.Paused = true
 		handle_winner(msg, room)

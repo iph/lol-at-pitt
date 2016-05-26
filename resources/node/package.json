@@ -1,0 +1,42 @@
+{
+  "name": "CimarronCentralWebsiteReactAssets",
+  "version": "1.0.0",
+  "description": "The reason for this file is because I want freaking autocomplete javascript. Run `npm install`, and bam. Mother friggin auto-complete in intellij (f' eclipse)",
+  "main": "bundle.js",
+  "scripts": {
+    "test": "ls"
+  },
+  "author": "Sean Myers",
+  "license": "ISC",
+  "dependencies": {
+    "accounting": "^0.4.1",
+    "babel-core": "^6.4.5",
+    "babel-jest": "^10.0.1",
+    "babel-loader": "^6.2.1",
+    "babel-preset-es2015": "^6.3.13",
+    "babel-preset-jest": "^10.0.1",
+    "babel-preset-react": "^6.3.13",
+    "big.js": "^3.1.3",
+    "es5-shim": "^4.5.2",
+    "flux": "^2.1.1",
+    "gulp": "^3.9.0",
+    "gulp-babel": "^6.1.2",
+    "gulp-cat": "^0.3.3",
+    "gulp-jest": "^0.4.0",
+    "gulp-print": "^2.0.1",
+    "gulp-util": "^3.0.7",
+    "jquery": "^2.1.4",
+    "keymirror": "^0.1.1",
+    "node-libs-browser": "^1.0.0",
+    "object-assign": "^4.0.1",
+    "once": "^1.3.3",
+    "react": "^0.14.7",
+    "react-dom": "^0.14.7",
+    "react-hot-loader": "^1.3.0",
+    "webpack": "^1.12.12",
+    "webpack-dev-server": "^1.14.1",
+    "redux": "latest",
+    "react-redux": "latest"
+  },
+  "devDependencies": {}
+}

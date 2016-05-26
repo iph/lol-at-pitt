@@ -13,3 +13,8 @@ func JsonParse(str string, item *interface{}) error {
 	err := json.Unmarshal([]byte(str), item)
 	return err
 }
+
+func JsonStringifyIgnoreError(item interface{}) string {
+	ret, _ := json.Marshal(item)
+	return string(ret)
+}

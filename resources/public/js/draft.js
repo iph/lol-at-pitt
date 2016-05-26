@@ -13,7 +13,7 @@ $(document).ready(function(){
         type: ""+fbId
       };
 
-//      ws.send(JSON.stringify(msg));
+        ws.send(JSON.stringify(msg));
     };
 
     var handle = function(message){

@@ -75,3 +75,12 @@ func initDB() *mgo.Database {
 	db := session.DB(DatabaseName)
 	return db
 }
+
+func InitDB() *mgo.Database {
+	session, err := mgo.Dial(MongoLocation)
+	if err != nil {
+		panic(err)
+	}
+	db := session.DB(DatabaseName)
+	return db
+}

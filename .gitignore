@@ -2,3 +2,4 @@ csv-reader/apikey*
 config.go
 tmp/
 .idea
+resources/node/node_modules/*

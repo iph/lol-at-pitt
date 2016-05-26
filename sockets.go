@@ -102,7 +102,7 @@ var room *DraftRoom
 func SocketRouter(m *martini.ClassicMartini) {
 	room = newDraftRoom()
 	Init()
-	m.Get("/draft", PlayerRequired, func(r render.Render, user site.User) {
+	m.Get("/draft", CaptainRequired, func(r render.Render, user site.User) {
 		r.HTML(200, "draft", user.FacebookId)
 	})
 
@@ -113,8 +113,8 @@ func SocketRouter(m *martini.ClassicMartini) {
 	})
 
 	m.Get("/admin/reset", func() {
-		draft.GetCurrentPlayer().HighestBid = 0
-		draft.GetCurrentPlayer().Team = ""
+		draft.Snapshot.CurrentPlayer.HighestBid = 0
+		draft.Snapshot.CurrentPlayer.Team = ""
 		Handle(Message{Type: "event", Text: "Admin reset current round, starting when they press the button.."})
 		allowTicks = false
 		draft.Paused = true
@@ -122,7 +122,9 @@ func SocketRouter(m *martini.ClassicMartini) {
 
 	m.Get("/admin/skip", func() {
 		Handle(Message{Type: "event", Text: "Admin skipped current player, waiting on him to start.."})
-		draft.Next()
+		draft.ProcessSkipEvent(draft.SkipEvent{
+			PlayerLeagueID: draft.Snapshot.CurrentPlayer.LeagueId,
+		})
 		Handle(Message{Type: "update"})
 	})
 
@@ -132,7 +134,6 @@ func SocketRouter(m *martini.ClassicMartini) {
 
 	m.Get("/admin/previous", func() {
 		Handle(Message{Type: "event", Text: "Admin undid previous round, waiting on him to start.."})
-		draft.Previous()
 		Handle(Message{Type: "update"})
 	})
 	// This is the sockets connection for the room, it is a json mapping to sockets.

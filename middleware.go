@@ -158,9 +158,8 @@ var PlayerRequiredFunc = func() martini.Handler {
 var DebugPlayerRequired = func() martini.Handler {
 	return func(urls url.Values, c martini.Context, w http.ResponseWriter, r *http.Request) {
 		leagueIdStr := urls.Get("debug")
-		//leagueId, err := strconv.ParseInt(leagueIdStr, 10, 64)
 
-		user := ols.GetUserDAO().GetUserByIgn(leagueIdStr)
+		user := ols.GetUserDAO().GetUserFB(leagueIdStr)
 		c.Map(user)
 	}
 }()
@@ -168,11 +167,7 @@ var DebugPlayerRequired = func() martini.Handler {
 var DebugLoginRequired = func() martini.Handler {
 	return func(urls url.Values, c martini.Context, w http.ResponseWriter, r *http.Request) {
 		loginId := urls.Get("login")
-		_, err := GetId(loginId) // Make sure you logged in correctly dope.
-		if err != nil {
-			panic(err)
-		}
-		c.MapTo(&DebugToken{urls.Get("login")}, (*oauth2.Tokens)(nil))
+		c.MapTo(&DebugToken{loginId}, (*oauth2.Tokens)(nil))
 	}
 }()
 
