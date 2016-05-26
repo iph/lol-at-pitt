@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/lab-D8/lol-at-pitt/draft"
+	"strings"
 )
 
 type DraftHandler func(msg Message, room *DraftRoom)
@@ -102,10 +103,15 @@ func handle_captains(msg Message, room *DraftRoom) {
 
 func handle_upcoming(msg Message, room *DraftRoom) {
 	text := ""
-	format := `<li class='list-group-item'> %s <span class='text-muted'> %d </span></li>`
+	format := `<li class='list-group-item'> %s <span class='text-muted'> [%s] </span></li>`
 	players := draft.GetPlayers()
 	for _, player := range players {
-		res := fmt.Sprintf(format, player.Ign, player.Score)
+		roles := []string{}
+		for _, val := range player.Proficiencies {
+			roles = append(roles, val.Position)
+		}
+
+		res := fmt.Sprintf(format, player.Ign, strings.Join(roles, ", "))
 		text += res
 	}
 	room.broadcast(&Message{Type: "upcoming", Text: text})
