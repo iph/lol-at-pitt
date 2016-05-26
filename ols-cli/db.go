@@ -94,7 +94,7 @@ func UploadPlayers(filename string) {
 				break
 			} else {
 				score, _ := strconv.Atoi(record[i+3])
-				append(proficiencies, ols.Proficiency{
+				proficiencies = append(proficiencies, ols.Proficiency{
 					Position: record[i],
 					Score:    score,
 				})
