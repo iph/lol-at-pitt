@@ -5,14 +5,21 @@ import (
 )
 
 type Player struct {
-	Ign           string
-	NormalizedIgn string
-	Id            int64
-	Name          string
-	Score         int
-	Tier          string
-	Roles         string
-	Extras        []Extra
+	Ign              string
+	NormalizedIgn    string
+	Id               int64
+	Name             string
+	Score            int
+	Tier             string
+	Roles            string
+	Extras           []Extra
+	Proficiencies    []Proficiency
+	ProficiencyTotal float64
+}
+
+type Proficiency struct {
+	Score    int
+	Position string
 }
 
 type PlayerDraftResult struct {
@@ -53,5 +60,9 @@ func (p Players) Swap(i, j int) {
 }
 
 func (p Players) Less(i, j int) bool {
-	return p[i].Score > p[j].Score
+	if p[i].ProficiencyTotal == p[j].ProficiencyTotal {
+		return p[i].Name < p[j].Name
+	} else {
+		return p[i].ProficiencyTotal < p[j].ProficiencyTotal
+	}
 }

@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/lab-D8/lol-at-pitt/ols"
+	"log"
 )
 
 type DraftPlayer struct {
@@ -89,6 +90,7 @@ func Bid(id string, amount int) bool {
 	bidSuccessful := false
 	if captain != nil {
 		lock.Lock()
+		log.Println("[BID]: ", captain.Ign, ",", captain.Name, ",", current.Ign, ",", current.HighestBid, ",", captain.TeamName)
 		if captain.TeamName != current.Team && amount > current.HighestBid && amount <= captain.Points && !Paused {
 			current.Team = captain.TeamName
 			current.HighestBid = amount
@@ -104,6 +106,7 @@ func Win() {
 	lock.Lock()
 	captain := GetAuctionerByTeam(current.Team)
 	if captain != nil {
+		log.Println("[WIN]: ", captain.Ign, ",", captain.Name, ",", current.Ign, ",", current.HighestBid, ",", captain.TeamName)
 		captain.Points -= current.HighestBid
 		oldteam := ols.GetTeamsDAO().LoadPlayerByCaptain(captain.Id)
 		team := oldteam

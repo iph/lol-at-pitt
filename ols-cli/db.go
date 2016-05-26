@@ -11,6 +11,7 @@ import (
 	"github.com/TrevorSStone/goriot"
 	"github.com/lab-D8/lol-at-pitt/ols"
 	"gopkg.in/mgo.v2"
+	"log"
 )
 
 func dumpDb(filename string) {
@@ -78,11 +79,40 @@ func UploadPlayers(filename string) {
 	csvReader := csv.NewReader(r)
 	allData, _ := csvReader.ReadAll()
 
-	for _, record := range allData[1:] {
-		//player := NewPlayer(record[0], record[1])
+	for _, record := range allData {
 		normalizedSummonerName := goriot.NormalizeSummonerName(record[1])[0]
-		amt, _ := strconv.Atoi(record[2])
-		player := &ols.Player{Name: record[0], Ign: record[1], NormalizedIgn: normalizedSummonerName, Score: amt, Roles: record[4], Id: rand.Int63()}
+		amt, err := strconv.Atoi(record[2])
+
+		if err != nil {
+			log.Println("Skipping ", record[0])
+			continue
+		}
+
+		proficiencies := []ols.Proficiency{}
+		for _, i := range []int{3, 4, 5} {
+			if record[i] == "None" {
+				break
+			} else {
+				score, _ := strconv.Atoi(record[i+3])
+				append(proficiencies, ols.Proficiency{
+					Position: record[i],
+					Score:    score,
+				})
+			}
+		}
+
+		totalProficiency, _ := strconv.ParseFloat(record[9], 64)
+
+		player := &ols.Player{
+			Name:             record[0],
+			Ign:              record[1],
+			NormalizedIgn:    normalizedSummonerName,
+			Score:            amt,
+			Proficiencies:    proficiencies,
+			Id:               rand.Int63(),
+			ProficiencyTotal: totalProficiency,
+		}
+
 		ols.GetPlayersDAO().Save(*player)
 	}
 }
@@ -93,12 +123,10 @@ func UploadCaptains(filename string) {
 	allData, _ := csvReader.ReadAll()
 	rand.Seed(51)
 	for _, record := range allData[1:] {
-		//captain := NewPlayer(record[0], record[1])
 		normalizedSummonerName := goriot.NormalizeSummonerName(record[1])[0]
 		captain := &ols.Player{Name: record[0], Ign: record[1], NormalizedIgn: normalizedSummonerName, Id: rand.Int63()}
 		if captain != nil {
 			team := ols.Team{Name: captain.Ign + "'s team", Captain: captain.Id}
-
 			team.Points, _ = strconv.Atoi(record[3])
 			ols.GetPlayersDAO().Save(*captain)
 			ols.GetTeamsDAO().Save(team)

@@ -14,6 +14,7 @@ import (
 	"github.com/lab-D8/lol-at-pitt/site"
 	"github.com/lab-D8/oauth2"
 	"github.com/martini-contrib/render"
+	"os"
 )
 
 // Register is used for derp
@@ -24,6 +25,13 @@ type Register struct {
 }
 
 func main() {
+	file, err := os.OpenFile("log.txt", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+
+	if err != nil {
+		panic(err)
+	}
+	log.SetOutput(file)
+	log.Println("Success?")
 	m := martini.Classic()
 	goriot.SetAPIKey(LeagueApiKey)
 	goriot.SetLongRateLimit(LongLeagueLimit, 10*time.Minute)
@@ -111,39 +119,36 @@ func main() {
 		normalizedSummonerName := goriot.NormalizeSummonerName(summonerName)[0]
 		player := ols.GetPlayersDAO().LoadNormalizedIGN(normalizedSummonerName)
 		if player.Id == 0 {
-			http.Redirect(w, r, "/error?status=NoPlayerFound", 302)
+			http.Redirect(w, r, "/error?status=No Player Found", 302)
+			return
 		}
 
 		user := ols.GetUserDAO().GetUserFB(id)
 
 		// User is registered registered
 		if user.LeagueId != 0 {
-			http.Redirect(w, r, "/error?status=AlreadyRegistered", 302)
+			http.Redirect(w, r, "/error?status=Already Registered User", 302)
 			return
 		}
 
 		user = site.User{LeagueId: player.Id, FacebookId: id}
 		log.Println("User registered:", user)
-		if player.Id == 0 {
-			// new player not in our db
-			ols.GetPlayersDAO().Save(player)
-		}
+
 		team := ols.GetTeamsDAO().LoadPlayerByCaptain(player.Id)
 		newTeam := team
 		if team.Name != "" && teamName != "" {
 			newTeam.Name = teamName
 			ols.GetTeamsDAO().Update(team, newTeam)
-
 		}
 		ols.GetUserDAO().Save(user)
 		//next := urls.Get("next")
-		log.Println("register completed going to page?")
+		log.Println("[REGISTER]: ", teamName)
 		renderer.HTML(200, "register_complete", 1)
 	})
 
 	initFunnyRouter(m)
 	SocketRouter(m)
-	err := http.ListenAndServe(":6060", m) // Nginx needs to redirect here, so we don't need sudo priv to test.
+	err = http.ListenAndServe(":6060", m) // Nginx needs to redirect here, so we don't need sudo priv to test.
 	if err != nil {
 		log.Println(err)
 	}

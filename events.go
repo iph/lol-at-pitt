@@ -118,12 +118,19 @@ func handle_current_player(msg Message, room *DraftRoom) {
 			<div class="col-md-8">%s</div>
 	</div>
 	<div class="row">
-			<div id="current_tier" class="col-md-3 text-muted">%s</div>
+			<div id="current_tier" class="col-md-3 text-muted">LKS: %s, Proficiency Score: %s</div>
 	</div>
 	</div>
 	`
 	player := draft.GetCurrentPlayer()
-	res := fmt.Sprintf(format, player.Ign, player.Roles, player.Tier)
+
+	roles := ""
+
+	for _, val := range player.Proficiencies {
+		roles += fmt.Sprintf(`<span class='text-info>%s</span><span>%s</span>`, val.Score, val.Position)
+	}
+
+	res := fmt.Sprintf(format, player.Ign, roles, strconv.Itoa(player.Score), strconv.FormatFloat(player.ProficiencyTotal, 'f', 2, 64))
 	room.broadcast(&Message{Type: "current-header", Text: player.Ign})
 	room.broadcast(&Message{Type: "current-player", Text: res})
 }
@@ -148,7 +155,6 @@ func handle_update(msg Message, room *DraftRoom) {
 	for _, client := range room.clients {
 		Handle(Message{Type: "bidder", From: client.ID})
 	}
-
 
 }
 
